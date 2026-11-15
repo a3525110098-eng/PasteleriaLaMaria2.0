@@ -2,7 +2,10 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
@@ -18,8 +21,8 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
 
-// Rutas para cualquier usuario autenticado (Administrador o Empleado)
-Route::middleware('auth')->group(function () {
+// Rutas para cualquier usuario autenticado y activo (Administrador o Empleado)
+Route::middleware(['auth', 'activo'])->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
 
     // Módulo de productos (CRUD)
@@ -33,8 +36,17 @@ Route::middleware('auth')->group(function () {
 });
 
 // Rutas exclusivas del Administrador
-Route::middleware(['auth', 'admin'])->group(function () {
-    Route::view('/usuarios', 'usuarios')->name('usuarios.index');
-    Route::view('/roles', 'roles')->name('roles.index');
-    Route::view('/empresa', 'empresa')->name('empresa');
+Route::middleware(['auth', 'activo', 'admin'])->group(function () {
+    // Usuarios
+    Route::resource('usuarios', UsuarioController::class)
+        ->only(['index', 'store', 'edit', 'update']);
+    Route::patch('/usuarios/{usuario}/estado', [UsuarioController::class, 'cambiarEstado'])
+        ->name('usuarios.estado');
+
+    // Roles
+    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+
+    // Empresa (un único registro)
+    Route::get('/empresa', [EmpresaController::class, 'edit'])->name('empresa');
+    Route::put('/empresa', [EmpresaController::class, 'update'])->name('empresa.update');
 });
